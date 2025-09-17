@@ -335,9 +335,51 @@ async def main():
                 # 查找非VIP的Buy Now按钮
                 print("🔍 查找产品列表中的非VIP Buy Now按钮...")
                 
-                # 查找所有产品行
-                product_rows = await page.locator('tr.table_tr__p0hoR').all()
-                print(f"📋 找到 {len(product_rows)} 个产品行")
+                # 首先尝试滚动到表格底部，确保所有产品都加载
+                try:
+                    print("📜 尝试滚动加载所有产品...")
+                    table_container = page.locator('.table_tableBody__yzcMg')
+                    if await table_container.count() > 0:
+                        # 滚动到表格底部
+                        await table_container.scroll_into_view_if_needed()
+                        await page.wait_for_timeout(1000)
+                        
+                        # 多次滚动确保加载完整
+                        for scroll_attempt in range(3):
+                            await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                            await page.wait_for_timeout(100)
+                            print(f"   📜 滚动尝试 {scroll_attempt + 1}/3")
+                            
+                        # 滚动回顶部
+                        await page.evaluate("window.scrollTo(0, 0)")
+                        await page.wait_for_timeout(500)
+                except Exception as e:
+                    print(f"⚠️ 滚动加载失败，继续扫描: {e}")
+                
+                # 查找所有产品行，尝试多种选择器
+                print("🔍 使用多种选择器查找产品行...")
+                
+                # 尝试不同的选择器
+                selectors_to_try = [
+                    'tr.table_tr__p0hoR',
+                    'tbody tr',
+                    '.table_tableBody__yzcMg tr',
+                    'table tr:has(.ProductList_title__dQRgA)',
+                    'tr:has(.ProductList_button__JPmz2)'
+                ]
+                
+                product_rows = []
+                for selector in selectors_to_try:
+                    try:
+                        rows = await page.locator(selector).all()
+                        print(f"   🔍 选择器 '{selector}': 找到 {len(rows)} 行")
+                        if len(rows) > len(product_rows):
+                            product_rows = rows
+                            print(f"   ✅ 使用此选择器，找到更多产品行")
+                    except Exception as e:
+                        print(f"   ❌ 选择器 '{selector}' 失败: {e}")
+                
+                print(f"📋 最终找到 {len(product_rows)} 个产品行")
                 
                 non_vip_buttons = []
                 vip_count = 0
