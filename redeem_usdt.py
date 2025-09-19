@@ -174,19 +174,27 @@ async def main():
                                 amount_match = None
                                 import re
                                 amount_patterns = [
-                                    r'(\d+\.?\d*)\s*USDT',
-                                    r'(\d+\.?\d*)\s*usdt',
-                                    r'Balance.*?(\d+\.?\d*)',
-                                    r'余额.*?(\d+\.?\d*)'
+                                    r'(\d{1,3}(?:,\d{3})*\.?\d*)\s*USDT',  # 支持千位分隔符
+                                    r'(\d{1,3}(?:,\d{3})*\.?\d*)\s*usdt',  # 支持千位分隔符
+                                    r'(\d+\.?\d*)\s*USDT',                  # 原始模式作为备用
+                                    r'(\d+\.?\d*)\s*usdt',                  # 原始模式作为备用
+                                    r'Balance.*?(\d{1,3}(?:,\d{3})*\.?\d*)', # 支持千位分隔符
+                                    r'Balance.*?(\d+\.?\d*)',               # 原始模式作为备用
+                                    r'余额.*?(\d{1,3}(?:,\d{3})*\.?\d*)',   # 支持千位分隔符
+                                    r'余额.*?(\d+\.?\d*)'                   # 原始模式作为备用
                                 ]
                                 
                                 for pattern in amount_patterns:
                                     matches = re.findall(pattern, product_text)
                                     if matches:
                                         try:
-                                            amount_match = float(matches[0])
+                                            # 移除千位分隔符并转换为浮点数
+                                            amount_str = matches[0].replace(',', '')
+                                            amount_match = float(amount_str)
+                                            print(f"  ✅ 匹配到金额: '{matches[0]}' -> {amount_match} USDT")
                                             break
-                                        except:
+                                        except Exception as parse_error:
+                                            print(f"  ⚠️ 金额解析失败: '{matches[0]}' - {parse_error}")
                                             continue
                                 
                                 if amount_match and amount_match > 0:
